@@ -15,6 +15,7 @@
     "format": "prettier --write './**/*.(ts|sol)'",
     "generate": "yarn account:generate",
     "hardhat-verify": "hardhat verify",
+    "hardhat:node": "hardhat node --network hardhat",
     "lint": "eslint",
     "lint-staged": "eslint",
     "test": "REPORT_GAS=true hardhat test --network hardhat",
