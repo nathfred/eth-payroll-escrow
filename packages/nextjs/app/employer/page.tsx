@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
-import { useScaffoldContract } from "~~/hooks/scaffold-eth";
+import { useCallback, useEffect, useState } from "react";
+import { useScaffoldContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
 export default function EmployerPage() {
   const [employeeAddress, setEmployeeAddress] = useState("");
@@ -9,29 +9,53 @@ export default function EmployerPage() {
   const [balance, setBalance] = useState("Loading...");
 
   const { data: contract } = useScaffoldContract({ contractName: "PayrollEscrow" });
+  const { writeContractAsync } = useScaffoldWriteContract({ contractName: "PayrollEscrow" });
 
-  const fetchContractBalance = async () => {
+  const fetchContractBalance = useCallback(async () => {
     if (!contract) return;
     const raw = await contract.read.getContractBalance();
     setBalance(`${Number(raw) / 1e18} ETH`);
-  };
+  }, [contract]);
 
   useEffect(() => {
     fetchContractBalance();
-  }, [contract]);
-
+  }, [contract, fetchContractBalance]);
   const addEmployee = async () => {
-    if (!contract || !employeeAddress || !salary) return;
-    await contract.write.addEmployee([employeeAddress, BigInt(salary)]);
-    await fetchContractBalance(); // Optional: refresh after add
+    try {
+      const parsedSalary = parseFloat(salary);
+      if (!employeeAddress || isNaN(parsedSalary) || parsedSalary <= 0) {
+        alert("Please enter valid employee address and salary.");
+        return;
+      }
+
+      await writeContractAsync({
+        functionName: "addEmployee",
+        args: [employeeAddress, BigInt(parsedSalary * 1e18)],
+      });
+
+      await fetchContractBalance();
+    } catch (err) {
+      console.error("Failed to add employee:", err);
+    }
   };
 
   const deposit = async () => {
-    if (!contract || !salary) return;
-    await contract.write.deposit([], {
-      value: BigInt(salary) * 10n ** 18n,
-    });
-    await fetchContractBalance(); // Optional: refresh after deposit
+    try {
+      const parsedSalary = parseFloat(salary);
+      if (isNaN(parsedSalary) || parsedSalary <= 0) {
+        alert("Please enter a valid salary amount to deposit.");
+        return;
+      }
+
+      await writeContractAsync({
+        functionName: "deposit",
+        value: BigInt(parsedSalary * 1e18),
+      });
+
+      await fetchContractBalance();
+    } catch (err) {
+      console.error("Failed to deposit:", err);
+    }
   };
 
   return (
