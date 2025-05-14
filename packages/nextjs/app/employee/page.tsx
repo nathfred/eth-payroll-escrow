@@ -1,15 +1,17 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
-import { useScaffoldContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useAccount } from "wagmi";
 
 export default function EmployeePage() {
   const { address } = useAccount();
-  const { data: contract } = useScaffoldContract({ contractName: "PayrollEscrow" });
 
   const [readableDate, setReadableDate] = useState<string>("Loading...");
   const [loading, setLoading] = useState<boolean>(false);
+
+  const { data: contract } = useScaffoldContract({ contractName: "PayrollEscrow" });
+  const { writeContractAsync } = useScaffoldWriteContract({ contractName: "PayrollEscrow" });
 
   const getNextPayDate = async (): Promise<string> => {
     if (!contract || !address) return "Unavailable";
@@ -27,7 +29,11 @@ export default function EmployeePage() {
     if (!contract) return;
     try {
       setLoading(true);
-      await contract.write.withdrawSalary();
+
+      await writeContractAsync({
+        functionName: "withdrawSalary"
+      });
+
       const updatedDate = await getNextPayDate();
       setReadableDate(updatedDate);
     } catch (error) {
